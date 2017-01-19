@@ -16,6 +16,8 @@ to trace the log events per request: ::
     savedprocedure_get
     savedprocedure_list
     syc_encounter
+    checksums_get
+    rolling_binarychunk_submit
 
 :Authors: Sana Dev Team
 :Version: 1.1

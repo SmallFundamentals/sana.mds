@@ -55,6 +55,8 @@ if 'v1' in settings.APICOMPAT_INCLUDE:
     v1binary_resource = Resource(BinaryHandler)
     v1binarypacket_resource = Resource(BinaryPacketHandler)
     v1base64packet_resource = Resource(Base64PacketHandler)
+    v1checksums_resource = Resource(ChecksumsHandler)
+    v1rolling_binarypacket_resource = Resource(RollingBinaryPacketHandler)
     v1requestlog_resource = Resource(RequestLogHandler)
     
     v1patterns = patterns(
@@ -108,6 +110,14 @@ if 'v1' in settings.APICOMPAT_INCLUDE:
         url(r'^json/eventlog/submit/$',
             v1event_resource,
             name="sana-json-eventlog-submit"),
+
+        url(r'^json/checksums/get/$',
+            v1checksums_resource,
+            name="sana-json-checksums-get"),
+
+        url(r'^json/rolling_binarychunk/submit/$',
+            v1rolling_binarypacket_resource,
+            name="sana-json-rolling-binarychunk-submit"),
         
         # LOGGING
         url(r'^log-detail/$',

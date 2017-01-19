@@ -604,7 +604,7 @@ def get_binary_checksum(procedure_guid, element_id, file_size):
     rolling_checksum = []
     md5_checksum = []
 
-    if created or binary.total_size == 0:
+    if binary.total_size == 0:
         # Write zero-filled blocks
         num_blocks, remaining_size = divmod(file_size, checksum_util.BLOCK_SIZE)
         with open(binary.data.path, "w") as f:
@@ -714,4 +714,4 @@ def register_rolling_binary_chunk(sp_guid, element_id, element_type, binary_guid
             logging.error(tbm)
         raise
 
-    return result, message
+        return result, message
