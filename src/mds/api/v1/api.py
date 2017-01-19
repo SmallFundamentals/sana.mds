@@ -21,7 +21,7 @@ from ..contrib import openmrslib
 from ..contrib.openmrslib import openmrs16 as openmrs
 from ..encoders.ffmpeg import FFmpeg
 from .util import flush
-from . import v2compatlib
+from . import v2compatlib, checksum_util
 # api.py -- interface-agnostic API methods
 
 BINARY_TYPES = ['PICTURE', 'SOUND', 'VIDEO', 'BINARYFILE']
@@ -574,3 +574,144 @@ def convert_binary(binary):
     result, message = FFmpeg().convert(binary, type, extension)
     logging.debug('FFmpeg: %s %s' % (result, message))
     return result
+
+def get_binary_checksum(procedure_guid, element_id, file_size):
+    """Returns checksums of the BinaryResource object associated with an encounter
+
+    If binary data is empty (no chuncks have been transferred), it fills data
+    with zero.
+
+    Parameters:
+        procedure_guid
+            The encounter id
+        element_id
+            The element within the encounter for which the binary was recorded
+        file_size
+            The total size of the binary
+    """
+    try:
+        sp = SavedProcedure.objects.get(guid=procedure_guid)
+    except SavedProcedure.DoesNotExist:
+        logging.error("Couldn't register binary %s for %s -- the saved "
+                      "procedure does not exist."
+                      % (element_id, procedure_guid))
+        return
+
+    binary, _ = BinaryResource.objects.get_or_create(
+            element_id=element_id,
+            procedure=sp)
+
+    rolling_checksum = []
+    md5_checksum = []
+
+    if created or binary.total_size == 0:
+        # Write zero-filled blocks
+        num_blocks, remaining_size = divmod(file_size, checksum_util.BLOCK_SIZE)
+        with open(binary.data.path, "w") as f:
+            for _ in xrange(num_blocks):
+                zero_block = bytearray(checksum_util.BLOCK_SIZE)
+                f.write(zero_block)
+
+            if remaining_size > 0:
+                last_block = bytearray(remaining_size)
+                f.write(last_block)
+
+        binary.total_size = int(file_size)
+        binary.save()
+    else:
+        with open(binary.data.path, "r") as f:
+            byte = f.read(checksum_util.BLOCK_SIZE)
+            while byte != "":
+                rolling_checksum.append(checksum_util.adler_32(byte))
+                md5_checksum.append(checksum_util.md5(byte))
+                byte = f.read(checksum_util.BLOCK_SIZE)
+
+    return (rolling_checksum, md5_checksum)
+
+def register_rolling_binary_chunk(sp_guid, element_id, element_type, binary_guid,
+        file_size, index, byte_data):
+    """Writes chunked binary data to the BinaryResource object associated with an encounter
+
+    It overwrites zero-filled section at the given index with given binary data.
+
+    Parameters:
+        sp_guid:
+            The encounter id
+        element_id:
+            The element within the encounter for which the binary was recorded
+        element_type:
+            The type attribute of the parent element
+        binary_guid:
+            The comma separated value from the parent element answer attribute for this binary
+        file_size:
+            The total size of the binary
+        index:
+            The index of binary data to be written
+        byte_data:
+            The chunk that will be written
+    """
+
+    logging.info("Registering binary chunk for: encounter -> %s, element_id -> %s)"
+                 % (sp_guid, element_id))
+
+    try:
+        sp = SavedProcedure.objects.get(guid=sp_guid)
+        logging.info("Success opening SavedProcedure -> %d ." % sp.msgpk)
+        binary, created = BinaryResource.objects.get_or_create(
+                element_id=element_id,
+                procedure=sp,
+                guid=binary_guid)
+        logging.debug("Opened BinaryResource -> %d, new: %s" % (binary.pk, created))
+
+        # Thread switching under heavy load may swap in register_saved_procedure
+        # before this happens. This is a safety measure.
+        if created:
+            filename = "%s.%s" % (
+                    binary.pk,
+                    BINARY_TYPES_EXTENSIONS[element_type])
+            binary.create_stub(fname=filename)
+
+        # All chunks might have been received
+        if binary.receive_completed():
+            message = "Uploading..."
+            if binary.convert_before_upload and not binary.conversion_complete:
+                message = "Converting..."
+            return True, message
+
+        binary.content_type = element_type
+        binary.total_size = int(file_size)
+        binary.save()
+
+        logging.info("upload_progress = %s" % binary.upload_progress)
+
+        # Write binary data at the given index
+        with open(binary.data.path, "r+b") as dest:
+            dest.seek(index + checksum_util.BLOCK_SIZE)
+
+            bytes_written = 0
+            for chunk in byte_data:
+                logging.info("writing %d bytes" % len(chunk))
+                dest.write(chunk)
+                bytes_written += len(chunk)
+
+        binary.upload_progress += bytes_written
+        binary.save()
+
+        # Check if upload is completed and convert
+        if binary.ready_to_upload():
+            v2compatlib.write_complex_data(binary)
+
+        return maybe_upload_procedure(sp)
+
+    except:
+        etype, value, tb = sys.exc_info()
+        trace = traceback.extract_tb(tb)
+        result = False
+        message = ('SavedProcedure -> %s, BinaryResource -> %s: %s %s'
+                   % (binary_guid, sp_guid, etype, value))
+
+        for tbm in trace:
+            logging.error(tbm)
+        raise
+
+    return result, message

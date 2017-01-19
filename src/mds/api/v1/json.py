@@ -47,6 +47,8 @@ from mds.api.v1.api import register_saved_procedure
 from mds.api.v1.api import register_binary
 from mds.api.v1.api import register_binary_chunk
 from mds.api.v1.api import register_client_events
+from mds.api.v1.api import get_binary_checksum
+from mds.api.v1.api import register_rolling_binary_chunk
 
 from mds.mrs.forms import *
 from mds.mrs.models import Notification, SavedProcedure
@@ -749,5 +751,80 @@ def syc_encounters(request, patient_id, encounters=None):
     logging.info("finished sync_encounters")
     return render_json_response(response)
 
+def checksums_get(request):
+    form = ChecksumRequestForm(request.POST)
 
+    if form.is_valid():
+        logging.error("Received valid checksum request form")
+
+        procedure_guid = form.cleaned_data["procedure_guid"]
+        element_id = form.cleaned_data["element_id"]
+        file_size = form.cleaned_data["file_size"]
+
+        rolling, md5 = get_binary_checksum(procedure_guid, element_id, file_size)
+        response_dict = {
+            "rolling": rolling,
+            "md5": md5,
+        }
+        return render_json_response(response_dict)
+    else:
+        logging.error("Received invalid checksum request form")
+        for k, v in request.REQUEST.items():
+            logging.debug("%s:%s" % (k, v))
+
+        return render_json_response(fail("Could not parse request: missing part or invalid data"))
+
+def rolling_binarychunk_submit(request):
+    response = ""
+    form = RollingBinaryPacketForm(request.POST, request.FILES)
+
+    if form.is_valid():
+        logging.info("Received valid rolling binarychunk form")
+
+        procedure_guid = form.cleaned_data['procedure_guid']
+        element_id = form.cleaned_data['element_id']
+        element_type = form.cleaned_data['element_type']
+        binary_guid = form.cleaned_data['binary_guid']
+        file_size = form.cleaned_data['file_size']
+        index = form.cleaned_data['index']
+        byte_data = form.cleaned_data['byte_data']
+
+        logging.info("File size: %s" % file_size)
+
+        try:
+            result, message = rolling_binarychunk_submit(
+                    procedure_guid,
+                    element_id,
+                    element_type,
+                    binary_guid,
+                    file_size,
+                    index,
+                    byte_data)
+
+            if result:
+                response = succeed("Successfully saved rolling binary chunk: %s"
+                                   % message)
+            else:
+                response = fail("Failed to save rolling binary chunk: %s"
+                                % message)
+        except Exception, e:
+            et, val, tb = sys.exc_info()
+            trace = traceback.format_tb(tb)
+            error = "Exception: %s %s %s" % (et, val, trace[0])
+            for tbm in trace:
+                logging.error(tbm)
+            resopnse = fail(error)
+
+        logging.info("Finished processing rolling binarychunk form")
+    else:
+        logging.error("Received invalid rolling binarychunk form")
+        for k, v in request.REQUEST.items():
+            if  k == "byte_data":
+                logging.debug("%s: (binary length %d)" % (k, len(v)))
+            else:
+                logging.debug("%s:%s" % (k, v))
+
+        response = fail("Could not parse request: missing part or invalid data")
+
+    return render_json_response(resopnse)
 
