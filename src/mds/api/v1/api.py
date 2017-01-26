@@ -656,7 +656,7 @@ def register_rolling_binary_chunk(sp_guid, element_id, element_type, binary_guid
 
     try:
         sp = SavedProcedure.objects.get(guid=sp_guid)
-        logging.info("Success opening SavedProcedure -> %d ." % sp.msgpk)
+        logging.info("Success opening SavedProcedure -> %d ." % sp.pk)
         binary, created = BinaryResource.objects.get_or_create(
                 element_id=element_id,
                 procedure=sp,
@@ -686,15 +686,12 @@ def register_rolling_binary_chunk(sp_guid, element_id, element_type, binary_guid
 
         # Write binary data at the given index
         with open(binary.data.path, "r+b") as dest:
-            dest.seek(index + checksum_util.BLOCK_SIZE)
+            dest.seek(index * checksum_util.BLOCK_SIZE)
 
-            bytes_written = 0
-            for chunk in byte_data:
-                logging.info("writing %d bytes" % len(chunk))
-                dest.write(chunk)
-                bytes_written += len(chunk)
+            logging.info("writing %d bytes" % len(byte_data))
+            dest.write(byte_data)
 
-        binary.upload_progress += bytes_written
+        binary.upload_progress += len(byte_data)
         binary.save()
 
         # Check if upload is completed and convert
