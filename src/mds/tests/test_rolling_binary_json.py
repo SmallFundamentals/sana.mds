@@ -38,6 +38,7 @@ class RollingBinaryJsonTestCase(RollingTestCase):
 
         self.assertEqual(response.status_code, 200)
 
+        # Create a temporary file with one chunk of random data
         chunk_index = 5
         rand_source = open("/dev/urandom", "rb")
         byte_data = rand_source.read(self.block_size)
@@ -63,4 +64,4 @@ class RollingBinaryJsonTestCase(RollingTestCase):
 
         resp_json = json.loads(response.content)
         self.assertEqual(resp_json["code"], 200)
-        self._assert_binary_resource(chunk_index, byte_data)
+        self._assert_single_chunk_in_binary(chunk_index, byte_data)

@@ -35,15 +35,15 @@ class RollingTestCase(TestCase):
     def tearDown(self):
         rmtree(self.path)
 
-    def _assert_binary_resource(self, chunk_index, byte_data):
+    def _assert_single_chunk_in_binary(self, chunk_index, byte_data):
         saved_br = BinaryResource.objects.get(element_id=self.br_element_id)
         with open(saved_br.data.path, "r") as dest:
-            # Jump to 5th block
+            # Jump to the correct block
             dest.seek(chunk_index * self.block_size)
             written_byte = dest.read(self.block_size)
             self.assertEqual(byte_data, written_byte)
 
-            # This must be 6th block
+            # This must be the next block
             zero_filled_byte = dest.read(self.block_size)
             self.assertNotEqual(byte_data, zero_filled_byte)
 
