@@ -689,7 +689,8 @@ def register_rolling_binary_chunk(sp_guid, element_id, element_type, binary_guid
             dest.seek(index * checksum_util.BLOCK_SIZE)
 
             logging.info("writing %d bytes" % len(byte_data))
-            dest.write(byte_data)
+            for chunk in byte_data:
+                dest.write(chunk)
 
         binary.upload_progress += len(byte_data)
         binary.save()

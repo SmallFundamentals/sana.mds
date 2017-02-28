@@ -794,7 +794,7 @@ def rolling_binarychunk_submit(request):
         logging.info("File size: %s" % file_size)
 
         try:
-            result, message = rolling_binarychunk_submit(
+            result, message = register_rolling_binary_chunk(
                     procedure_guid,
                     element_id,
                     element_type,
@@ -828,5 +828,5 @@ def rolling_binarychunk_submit(request):
 
         response = fail("Could not parse request: missing part or invalid data")
 
-    return render_json_response(resopnse)
+    return render_json_response(response)
 
