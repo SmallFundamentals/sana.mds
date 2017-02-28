@@ -7,9 +7,9 @@ from shutil import rmtree
 import uuid
 
 class RollingTestCase(TestCase):
-    def setUp(self):
-        self.block_size = 1024
+    block_size = 1024
 
+    def setUp(self):
         # Create required objects
         client = Client.objects.create()
         self.sp_guid = uuid.uuid4()
@@ -35,7 +35,7 @@ class RollingTestCase(TestCase):
     def tearDown(self):
         rmtree(self.path)
 
-    def _assert_single_chunk_in_binary(self, chunk_index, byte_data):
+    def _assertSingleChunkData(self, chunk_index, byte_data):
         saved_br = BinaryResource.objects.get(element_id=self.br_element_id)
         with open(saved_br.data.path, "r") as dest:
             # Jump to the correct block

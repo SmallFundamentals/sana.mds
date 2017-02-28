@@ -64,4 +64,4 @@ class RollingBinaryJsonTestCase(RollingTestCase):
 
         resp_json = json.loads(response.content)
         self.assertEqual(resp_json["code"], 200)
-        self._assert_single_chunk_in_binary(chunk_index, byte_data)
+        self._assertSingleChunkData(chunk_index, byte_data)

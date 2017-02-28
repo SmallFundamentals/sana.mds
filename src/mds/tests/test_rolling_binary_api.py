@@ -36,4 +36,4 @@ class RollingBinaryApiTestCase(RollingTestCase):
                 byte_data,
         )
         self.assertTrue(result)
-        self._assert_single_chunk_in_binary(chunk_index, byte_data)
+        self._assertSingleChunkData(chunk_index, byte_data)
