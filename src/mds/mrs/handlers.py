@@ -28,7 +28,8 @@ from mds.api.v1.json import (render_json_response,
                               notification_submit, email_notification_submit, 
                               register_client_events,
                               binary_submit, binarychunk_submit, 
-                              binarychunk_hack_submit, patient_get, 
+                              binarychunk_hack_submit, patient_get,
+                              checksums_get, rolling_binarychunk_submit,
                               patient_list, parseOne, parseAll )
 
 from mds.api.v1.v2compatlib import spform_to_encounter, responses_to_observations      
@@ -45,6 +46,8 @@ __all__ = ['AuthHandler',
            'BinaryHandler',
            'BinaryPacketHandler',
            'Base64PacketHandler',
+           'ChecksumsHandler',
+           'RollingBinaryPacketHandler',
            'PatientHandler']
 
 @logged
@@ -248,7 +251,22 @@ class Base64PacketHandler(BaseHandler):
     
     def create(self,request, *args, **kwargs):
         return binarychunk_hack_submit(request)
-    
+
+@logged
+class ChecksumsHandler(BaseHandler):
+    allowed_methods = ('POST',)
+    signals = { LOGGER: ( EventSignal(), EventSignalHandler(RequestLog) ) }
+
+    def create(self, request, *args, **kwargs):
+        return checksums_get(request)
+
+@logged
+class RollingBinaryPacketHandler(BaseHandler):
+    allowed_methods = ('POST',)
+    signals = { LOGGER: ( EventSignal(), EventSignalHandler(RequestLog) ) }
+
+    def create(self, request, *args, **kwargs):
+        return rolling_binarychunk_submit(request)
 
 @logged
 class PatientHandler(BaseHandler):

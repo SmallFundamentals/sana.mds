@@ -337,7 +337,8 @@ def spform_to_encounter(form):
     except:
         device = get_or_create_v2(v2.Device, phone, "name")
 
-    subject = get_v2(v2.Subject, patientId, "system_id")
+    #subject = get_v2(v2.Subject, patientId, "system_id")
+    subject = v2.Subject.objects.get(system_id=patientId)
     concept = get_v2(v2.Concept,"ENCOUNTER","name")
     created = True
     try:

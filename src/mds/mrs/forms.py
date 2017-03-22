@@ -88,3 +88,16 @@ class BinarySubmitForm(forms.Form):
     procedure_guid = forms.CharField(required=True, max_length=512)
     element_id = forms.CharField(required=True)
 
+class ChecksumRequestForm(forms.Form):
+    procedure_guid = forms.CharField(required=True, max_length=512)
+    element_id = forms.CharField(required=True)
+    file_size = forms.IntegerField(required=True)
+
+class RollingBinaryPacketForm(forms.Form):
+    procedure_guid = forms.CharField(required=True, max_length=512)
+    element_id = forms.CharField(required=True)
+    element_type = forms.CharField(required=True)
+    binary_guid = forms.CharField(required=True)
+    file_size = forms.IntegerField(required=True)
+    index = forms.IntegerField(required=True)
+    byte_data = forms.FileField()

@@ -64,6 +64,14 @@ urlpatterns = patterns(
     url(r'^json/eventlog/submit/$',
         'sana.mrs.json.eventlog_submit',
         name="sana-json-eventlog-submit"),
+
+    url(r'^json/checksums/get/$',
+        'sana.mrs.json.checksums_get',
+        name="sana-json-checksums-get"),
+
+    url(r'^json/rolling_binarychunk/submit/$',
+        'sana.mrs.json.rolling_binarychunk_submit',
+        name="sana-json-rolling-binarychunk-submit"),
 )
 
 # These were never really used in v1 but leaving as commented so that 
