@@ -575,7 +575,7 @@ def convert_binary(binary):
     logging.debug('FFmpeg: %s %s' % (result, message))
     return result
 
-def get_binary_checksum(procedure_guid, element_id, file_size):
+def get_binary_checksum(procedure_guid, element_id, file_size, element_type='PICTURE'):
     """Returns checksums of the BinaryResource object associated with an encounter
 
     If binary data is empty (no chuncks have been transferred), it fills data
@@ -597,9 +597,22 @@ def get_binary_checksum(procedure_guid, element_id, file_size):
                       % (element_id, procedure_guid))
         return
 
-    binary, _ = BinaryResource.objects.get_or_create(
+    binary, created = BinaryResource.objects.get_or_create(
             element_id=element_id,
             procedure=sp)
+
+    if not binary.data or created:
+        filename = "%s.%s" % (binary.pk, BINARY_TYPES_EXTENSIONS[element_type])
+        binary.data = binary.data.field.generate_filename(binary, filename)
+        path, file_ = os.path.split(binary.data.path)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        open(binary.data.path, "w").close()
+
+        binary.create_stub(fname=filename)
+        binary.total_size = 0
+        binary.upload_progress = 0
+        binary.save()
 
     rolling_checksum = []
     md5_checksum = []

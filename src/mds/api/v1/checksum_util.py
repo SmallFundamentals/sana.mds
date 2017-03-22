@@ -1,5 +1,6 @@
 import hashlib
 import os
+import struct
 
 BLOCK_SIZE = 1024
 
